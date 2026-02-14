@@ -1,0 +1,49 @@
+import os
+import re
+import pandas as pd
+
+folder_path = r"C:\Users\AL IMRAN\Desktop\CSE499B\matrix_model"
+
+all_records = []
+
+for filename in os.listdir(folder_path):
+    if not filename.lower().endswith(".txt"):
+        continue
+
+    file_path = os.path.join(folder_path, filename)
+
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        text = f.read()
+
+    # Split based on parameter blocks
+    sections = re.split(r'#Parameters\s*=\s*\{([^}]*)\}', text)
+
+    for i in range(1, len(sections), 2):
+        params_text = sections[i]
+        data_text = sections[i + 1]
+
+        # Extract all parameters
+        param_pairs = re.findall(r'(\w+)\s*=\s*([\d\.\-eE]+)', params_text)
+
+        params = {}
+        for key, value in param_pairs:
+            if key in ['sh', 'a', 'rh', 'x']:
+                params[key] = float(value)
+
+        # Extract wavelength and absorption
+        data = re.findall(r'([\d\.\-eE]+)\t([\d\.\-eE]+)', data_text)
+
+        for wl, val in data:
+            all_records.append({
+                **params,
+                'wavelength': float(wl),
+                'absorption': float(val)
+            })
+
+df = pd.DataFrame(all_records, columns=['sh', 'a', 'rh', 'x', 'wavelength', 'absorption'])
+
+df.to_csv('merged_extracted.csv', index=False)
+
+print("Extraction complete. Saved as merged_extracted.csv")
+print(df.head())
+print("Total entries:", df.shape)
